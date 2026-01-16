@@ -1,0 +1,83 @@
+---
+title: "week1-lab"
+author: Isabella Segarra
+format: html
+---
+
+# Data Wrangling with tidyverse
+Before analyzing data, you must ensure the data is in a tidy format. This includes the following:
+- handling missing values
+- consistent naming conventions
+- varaibles in correct data type 
+- ensure data is in long format (pivot longer)
+
+## Load in libraries
+```{r}
+library(janitor) # for data clenaing
+library(tidyverse) # for data cleaning
+library(here) # for data import 
+```
+
+## Data Import
+```{r}
+bee_stress_df <- read_csv(here("week_1","data", "stressor.csv")) %>% 
+  clean_names()
+```
+## Data exploration
+```{r}
+head(bee_stress_df)
+unique(bee_stress_df$state)
+unique(bee_stress_df$stressor)
+character(bee_stress_df)
+```
+## Data Cleaning
+1. Clean up messy characters
+```{r}
+clean_bee_stress <- bee_stress_df %>% 
+  # Update crazy characters
+  mutate(state = str_replace_all(state,"[^A-Za-z]", ""), 
+         stressor = str_replace_all(stressor, "[^A-Za-z]", ""),
+         # Update names to be correct 
+         stressor = str_replace_all(stressor, "Disesases", "Diseases"), 
+         stressor = str_replace_all(stressor, "Varroamites", "Varroa Mites"),
+         # Change year to numeric
+         year = as.numeric(year)
+  ) %>% 
+  # pivot data to be longer
+  pivot_longer(
+    cols = "january_march":"october_december", 
+    names_to = "months", 
+    values_to = "stress_pct"
+  ) %>% 
+# Convert months to quarters
+  mutate(quarter = case_when(
+    months ==" january_march" ~ 1, 
+    months == "april_june" ~ 2, 
+    months == "july_september" ~ 3, 
+    months == "october_december" ~ 4
+  )) %>% 
+# Remove united states and other states 
+  filter(state != "United States", state != "OtherStates")
+
+```
+
+## Data visuzaliation
+Filter to NM and Varroa Mites
+```{r}
+
+nm_stressor <- clean_bee_stress %>% 
+  filter(state == "NewMexico", stressor == "Varroa Mites") %>% 
+  drop_na() %>% 
+  group_by(year, quarter) %>% 
+    summarize(avg_stress = mean(stress_pct)) 
+
+```
+
+```{r}
+nm_stressor %>% 
+  ggplot(aes(quarter, avg_stress)) +
+         
+ggplot(penguins, aes(x = species, fill = island)) +
+  geom_bar(position = position_dodge2(preserve = "single"))
+```
+
