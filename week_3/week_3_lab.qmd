@@ -1,0 +1,102 @@
+---
+title: "week3-lab"
+author: Isabella Segarra
+format: html
+---
+```{r}
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##                                    setup                                 ----
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#..........................load packages.........................
+library(tidyverse)
+library(here)
+
+#..........................import data...........................
+ drought <- read_csv(here::here("week_3", "data", "drought.csv"))
+
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##                            wrangle drought data                          ----
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+drought_clean <- drought |>
+  
+  # Pivot table to be in tidy form
+  pivot_longer(cols = None:D4, names_to = "drought_lvl",    values_to = "area_pct") |>
+  
+  janitor::clean_names() |>
+  
+  # Rename state abbreviation column
+   rename(state_abb = state_abbreviation) |>
+
+  # select cols of interest & update names for clarity (as needed) ----
+  select(date = valid_start, state_abb, drought_lvl, area_pct) |> 
+
+  # add year, month & day cols using {lubridate} fxns ----
+  # NOTE: this step isn't necessary for our plot, but I'm including as examples of how to extract different date elements from a object of class `Date` using {lubridate} ----
+  mutate(year = year(date),
+         month = month(date, label = TRUE, abbr = TRUE),
+         day = day(date)) |>
+
+  # add drought level conditions names ----
+  mutate(drought_lvl_long = factor(drought_lvl,
+                            levels = c("D4", "D3", "D2", "D1","D0", "None"),
+                            labels = c("D4 (Exceptional)", "D3 (Extreme)",
+                                       "D2 (Severe)", "D1 (Moderate)", 
+                                       "D0 (Abnormally Dry)", 
+                                       "No Drought"))) |>
+  
+  # reorder cols ----
+  relocate(date, year, month, day, state_abb, drought_lvl, drought_lvl_long, area_pct)
+```
+
+```{r}
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##       create stacked area plot of CA drought conditions through time     ----
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+install.packages(c("sysfonts", "showtext"))
+library(sysfonts)
+library(showtext)
+font_add_google("Nunito", "nunito")
+
+drought_clean |> 
+  
+  # remove drought_lvl "None" & filter for just CA ----
+  filter(drought_lvl != "None",
+         state_abb == "CA") |> 
+  # initialize ggplot ----
+  ggplot(mapping = aes(x = date, y = area_pct, fill = drought_lvl_long)) +
+  #stacked plot 
+  geom_area(position = position_stack(reverse = TRUE)) +
+  # Adjust colors 
+  scale_fill_manual(values = c("#863904", "#FF0200", "#ffc200", "#FFD965", "#FFFF00")) +
+  labs(title = "Drought area in California") +
+  scale_x_date(date_breaks = "2 year", date_labels = "%Y", breaks = seq(0,100, by = 10)) + 
+  scale_y_continuous(expand = c(0,NA), 
+                     labels = scales::label_percent(scale = 1)) +
+  # adjust theme elements 
+  theme(axis.title = element_blank(), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(), 
+        legend.title = element_blank(), 
+        legend.position = "bottom", 
+        plot.title = element_text(hjust = 0.5, size = 20, color = "#686868"), 
+        axis.line= element_line(color = "#64A1d8"), 
+        axis.line.x = element_line(color = "#64A1d8"),
+        axis.ticks = element_line(color = "#64A1d8"),
+        panel.background = element_rect(fill = "white"), 
+        panel.grid = element_line(color = "grey"), 
+        legend.key.width = unit(0.4, 'cm'), 
+        legend.key.height = unit(0.25, 'cm'),
+        plot.margin = margin(t =0, r = 0, b = 10, l =4)) 
+        #text = element_text(family = "Nunito"))
+  
+  # adjust limits
+  # pipe into ggplot here!
+```
+
+Things to update on the plot:
+- margins
+- tick marks and year tick marks 
+- 
